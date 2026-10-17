@@ -15,7 +15,7 @@
 
 ## 실제 주차장 영상 분석
 
-[![B5 입차에 따라 주차면 상태가 바뀌는 실제 추론](docs/demo/b5-transition.jpg)](docs/demo/b5-transition.mp4)
+[![B5 입차에 따라 주차면 상태가 바뀌는 실제 추론](docs/demo/b5-transition.gif)](docs/demo/b5-transition.mp4)
 
 직접 촬영한 55호관 영상에 **학습된 YOLOv8x**와 현재 Flask 판정 코드를 실행한 결과입니다. 왼쪽은 빈자리·점유 탐지 박스, 오른쪽은 다각형 매핑과 시간 필터를 적용한 주차면 상태입니다. 녹화 영상의 일부 구간을 재실행했으며, 빨간색은 점유·초록색은 빈자리입니다.
 
@@ -27,10 +27,12 @@
 
 | 영상 분석 · 30초 | 실제 Flutter 상세 화면 · 30초 |
 | :---: | :---: |
-| [![B5 입차를 분석하는 모델 탐지와 서버 판정](docs/demo/b5-transition.jpg)](docs/demo/b5-transition.mp4) | [<img src="docs/demo/detail-transition.png" alt="실제 앱 상세 화면의 B5 빈자리와 2/20 표시" height="360">](docs/demo/detail-transition.mp4) |
+| [![B5 입차를 분석하는 모델 탐지와 서버 판정](docs/demo/b5-transition.gif)](docs/demo/b5-transition.mp4) | [<img src="docs/demo/detail-transition.gif" alt="실제 앱 상세 화면에서 B5 점유와 빈자리 수가 바뀌는 시연" height="360">](docs/demo/detail-transition.mp4) |
 | 왼쪽은 탐지 결과, 오른쪽은 시간 필터·상태 전이를 거친 주차면 상태입니다. | B5가 초록에서 빨강으로 바뀌고 빈자리는 2→1, 점유율은 90→95%로 바뀝니다. |
 
 앱 영상은 기존 Flutter 웹 빌드의 상세 화면에 **같은 실제 추론 결과를 API로 시간 순서대로 재생**해 녹화했습니다. 수동으로 색상을 바꾼 애니메이션이 아닙니다. 앱의 기존 10초 조회 주기를 유지했으므로, 모델 판정 후 다음 조회에서 화면이 바뀝니다. 녹화 원본을 이용한 재생 시연이며 운영 중인 CCTV 중계나 실시간 성능 측정 영상은 아닙니다.
+
+GIF는 README에서 반복 재생됩니다. [영상 분석 MP4 · 30초](docs/demo/b5-transition.mp4) · [앱 상세 화면 MP4 · 30초](docs/demo/detail-transition.mp4)에서 재생 위치와 화질을 직접 확인할 수 있습니다.
 
 [추론 프레임별 기록](docs/demo/b5-transition.json) · [앱 조회 기록](docs/demo/detail-transition-log.json) · [로컬 재생 서버](scripts/serve_inference_replay.py)
 
