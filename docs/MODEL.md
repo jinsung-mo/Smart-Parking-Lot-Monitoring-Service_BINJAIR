@@ -4,6 +4,33 @@
 
 ## 시연 영상
 
+### B5 입차와 실제 앱 상태 전환
+
+[![B5 빈자리에서 점유로의 전환](demo/b5-transition.jpg)](demo/b5-transition.mp4)
+
+- 원본: `parking_best.mp4`의 110–140초, 30초, 원래 속도.
+- 실제 판정: B5는 110.0023초에 빈자리였고 128.5195초에 점유로 전환됐습니다. 모델·임계값·주차면 좌표를 시연을 위해 바꾸지 않았습니다.
+- 이 구간의 최초·최종 판정을 비교하면 바뀐 주차면은 B5 하나이며, 빈자리 수는 2개에서 1개로 바뀝니다.
+- [실제 Flutter 상세 화면 녹화](demo/detail-transition.mp4): 기존 웹 빌드에 같은 추론 결과를 로컬 API로 재생했습니다. 상세 화면의 10초 자동 조회 주기를 유지했습니다.
+- 로컬 상태 API는 재생 시작 후 20.489초의 조회부터 점유 결과를 반환했습니다. 상세 화면은 자신의 다음 조회(25.730초) 이후 갱신합니다. 지도 화면도 뒤에서 조회하므로 조회 기록 전체의 첫 점유 응답과 상세 화면의 갱신 시각은 다릅니다. 모델 전환 시각, API 조회 시각, 화면 반영 시각을 구분합니다.
+
+[프레임별 실제 결과](demo/b5-transition.json) · [앱 조회 기록](demo/detail-transition-log.json)
+
+재실행:
+
+```bash
+python scripts/create_inference_demo.py \
+  --model models/best_seo.pt --video /path/to/parking_best.mp4 \
+  --lot parking_lot_A --output docs/demo/b5-transition \
+  --start 110 --duration 30
+
+# 기존 Flutter 웹 빌드를 build/web에 준비한 뒤 실행
+python scripts/serve_inference_replay.py \
+  --report docs/demo/b5-transition.json --web-root build/web --port 8766
+```
+
+재생 서버의 `POST /replay/start`로 시간 재생을 시작하고, Flutter 앱이 조회하는 `/api/status`를 이 로컬 서버로 연결합니다. 녹화에서는 브라우저 요청 프록시를 사용해 기존 API 주소의 상태 조회만 로컬로 전달했습니다. 앱의 화면 구현·자동 조회 주기와 운영 데이터는 변경하지 않았습니다. 이 서버는 기록을 재생할 뿐 모델을 새로 실행하거나 상태를 생성하지 않으며, 실제 CCTV 운영 서버를 대신하지 않습니다.
+
 ### 55호관 · 주차면 20개
 
 [![55호관 실제 영상 추론](demo/building55-inference.gif)](demo/building55-inference.mp4)

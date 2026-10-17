@@ -1,0 +1,43 @@
+{
+  "fps": 5,
+  "seconds": 30,
+  "errors": [],
+  "requests": [
+    {
+      "B5": "empty",
+      "available": 2,
+      "elapsed": 0.489,
+      "source_seconds": 110.4193
+    },
+    {
+      "B5": "empty",
+      "available": 2,
+      "elapsed": 5.727,
+      "source_seconds": 115.6742
+    },
+    {
+      "B5": "empty",
+      "available": 2,
+      "elapsed": 10.493,
+      "source_seconds": 120.4287
+    },
+    {
+      "B5": "empty",
+      "available": 2,
+      "elapsed": 15.73,
+      "source_seconds": 125.6835
+    },
+    {
+      "B5": "occupied",
+      "available": 1,
+      "elapsed": 20.489,
+      "source_seconds": 130.438
+    },
+    {
+      "B5": "occupied",
+      "available": 1,
+      "elapsed": 25.73,
+      "source_seconds": 135.6928
+    }
+  ]
+}
