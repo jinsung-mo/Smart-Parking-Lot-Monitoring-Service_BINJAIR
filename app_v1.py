@@ -495,7 +495,7 @@ class ParkingSystem:
         self.parking_status = {}  # 주차 공간 상태 저장
         self.video_threads = {}  # 비디오 처리 스레드 저장
         self.running = False
-        self.frame_skip = 5  # 5프레임 중 1프레임만 추론 (연산량 80% 감소)
+        self.frame_skip = 5  # 5프레임 중 1프레임만 추론 (추론 대상 프레임 수 약 80% 감소)
         self.status_lock = threading.RLock()  # 스레드 간 상태 공유용 락
 
         # 영상 표시 설정 (OpenCV GUI 호출은 모두 메인 스레드에서만 수행)

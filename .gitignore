@@ -4,6 +4,8 @@
 *.log
 *.db
 *.iml
+__pycache__/
+*.py[cod]
 .idea/
 .metadata
 

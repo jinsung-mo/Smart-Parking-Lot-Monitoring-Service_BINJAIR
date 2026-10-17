@@ -1,0 +1,80 @@
+# 모델과 실제 영상 추론
+
+프로젝트에 보관된 학습 가중치와 원본 주차장 영상을 사용해 분석 코드를 재실행했습니다. 시연은 YOLO가 반환한 탐지 결과를 `app_v1.py`의 공간 매핑·시간 필터·상태 머신에 전달해 생성했습니다.
+
+## 시연 영상
+
+### 55호관 · 주차면 20개
+
+[![55호관 실제 영상 추론](demo/building55-inference.gif)](demo/building55-inference.mp4)
+
+왼쪽은 모델의 탐지 박스와 신뢰도, 오른쪽은 주차면별 서버 판정입니다. 빨간색은 점유, 초록색은 빈자리입니다. [MP4](demo/building55-inference.mp4) · [프레임별 결과 JSON](demo/building55-inference.json)
+
+### 도서관 · 주차면 36개
+
+[![도서관 실제 영상 추론](demo/library-inference.gif)](demo/library-inference.mp4)
+
+탐지 박스 수와 주차면 수는 다를 수 있습니다. 서버는 지정된 다각형과 겹치는 결과를 매핑하고, 최근 판정 이력까지 반영해 상태를 결정합니다. [MP4](demo/library-inference.mp4) · [프레임별 결과 JSON](demo/library-inference.json)
+
+## 사용한 모델
+
+시연과 기존 운영 로그에서 확인한 모델은 **`best_seo.pt`(YOLOv8x)** 입니다. 두 체크포인트 모두 `0: space-empty`, `1: space-occupied`를 사용하며 Ultralytics `8.3.65`로 저장됐습니다.
+
+| 체크포인트 | 학습 기반 모델 | Precision | Recall | mAP@50 | mAP@50:95 |
+| --- | --- | ---: | ---: | ---: | ---: |
+| **best_seo.pt** | **YOLOv8x** | **95.02%** | **95.10%** | **97.42%** | **84.91%** |
+| best_seo2.pt | YOLOv5x | 91.57% | 87.90% | 92.75% | 81.42% |
+
+수치는 각 파일에 저장된 **학습 당시 검증 지표**입니다. 학습 설정이 다른 두 실험의 기록이며, 이번 영상의 정확도나 주차면 상태 판정 정확도를 새로 측정한 결과는 아닙니다. 재평가용 정답 라벨과 데이터 분할 정보는 현재 보관 자료에서 확인되지 않았습니다.
+
+YOLOv8x 체크포인트의 저장 설정은 입력 크기 `640`, 최대 `200 epochs`, `batch=16`, `patience=20`입니다. 두 모델 중 실제 시연에는 운영 코드와 로그에서 사용이 확인된 YOLOv8x를 적용했습니다.
+
+| 파일 식별 정보 | 값 |
+| --- | --- |
+| `best_seo.pt` 크기 | 136,737,651 bytes |
+| 저장 일시 | 2025-04-03T17:53:41.410841 |
+| SHA-256 | `b4e206a24df2d28bf39853a33e35d0b170f3b2e383a3bb620282ee53dbffe756` |
+| `best_seo2.pt` SHA-256 | `80e1e9e1c7d686665546f0828fb3e1530a80cde7937a151b8f5d438549974f68` |
+
+원본 가중치는 Git 추적 대상에서 제외했습니다. 재실행할 때 해당 파일을 `models/best_seo.pt`에 두거나 모델 경로를 직접 지정합니다.
+
+## 현장 데이터 수집
+
+팀은 55호관과 도서관에서 시간대·조명 조건을 달리해 영상을 수집했습니다. 아래는 프로젝트 발표 자료에 포함된 주간·야간 촬영 사진입니다.
+
+| 주간 촬영 | 야간 촬영 |
+| --- | --- |
+| ![주간 주차장 촬영](images/capture-day.png) | ![야간 주차장 촬영](images/capture-night.png) |
+
+자료에는 공개 차량 이미지 약 400장을 초기 데이터로 사용하고, 빈 주차면을 추가 라벨링한 과정이 기록돼 있습니다. 현재 공개 시연은 보관된 **주간 영상 두 개**를 사용했습니다.
+
+## 재실행 방법
+
+Python 3.12, PyTorch 2.5.1, Ultralytics 8.3.65, OpenCV 4.11.0 환경에서 CPU로 실행했습니다.
+
+```bash
+pip install -r requirements-demo.txt
+
+python scripts/create_inference_demo.py \
+  --model models/best_seo.pt \
+  --video videos/library2.mp4 \
+  --lot parking_lot_B \
+  --output docs/demo/library-inference \
+  --start 3 --duration 8
+
+python scripts/create_inference_demo.py \
+  --model models/best_seo.pt \
+  --video /path/to/parking_best.mp4 \
+  --lot parking_lot_A \
+  --output docs/demo/building55-inference \
+  --start 3 --duration 8
+```
+
+[`create_inference_demo.py`](../scripts/create_inference_demo.py)는 현재 서버의 `_detect_vehicles`를 호출합니다. 별도의 임시 DB를 사용하므로 운영 이력에 시연 기록을 섞지 않습니다. 기본 설정은 신뢰도 `0.5`, 5프레임당 1회 추론이며 출력 시작 전 3초 분량으로 필터를 예열합니다.
+
+| 입력 | 해상도 | 원본 FPS | 시연 길이 | 시연의 추론 프레임 수 |
+| --- | --- | ---: | ---: | ---: |
+| `parking_best.mp4` | 970 × 652 | 약 59.94 | 약 8초 | 96 |
+| `library2.mp4` | 1216 × 720 | 30 | 8초 | 48 |
+
+각 실행은 MP4·GIF·미리보기 JPG·JSON을 생성합니다. JSON에는 모델·입력 영상의 SHA-256, 실행 환경, 샘플링 설정, 프레임별 실제 탐지 박스와 주차면 상태가 포함됩니다. 원본 영상 시간에 맞춰 재생하는 녹화본이며, 영상의 재생 속도나 JSON의 모델 호출 시간은 앱 전체의 응답 지연 측정값과는 별개입니다.

@@ -1,0 +1,7 @@
+# Reproduction environment used for the checkpoint-backed demonstration.
+-r requirements.txt
+ultralytics==8.3.65
+torch==2.5.1
+torchvision==0.20.1
+numpy>=1.23,<2
+imageio-ffmpeg==0.6.0

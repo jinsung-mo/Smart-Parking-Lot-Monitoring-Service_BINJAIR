@@ -10,7 +10,16 @@
 | --- | --- |
 | [요구사항 명세](docs/REQUIREMENTS.md) | 운전자·관리자 기능, 처리 규칙, 구현 근거 |
 | [API 명세](docs/API.md) | 엔드포인트, 인증, 요청·응답 필드, 오류 코드와 호출 예시 |
+| [모델·추론 재현](docs/MODEL.md) | 학습 체크포인트, 저장된 검증 지표, 실제 영상 시연과 재실행 방법 |
 | [시스템 아키텍처](#시스템-아키텍처) | 영상 입력부터 분석·저장·앱 조회까지의 데이터 흐름 |
+
+## 실제 주차장 영상 분석
+
+[![YOLOv8x로 분석한 55호관 주차장 영상](docs/demo/building55-inference.gif)](docs/demo/building55-inference.mp4)
+
+직접 촬영한 55호관 영상에 **학습된 YOLOv8x**와 현재 Flask 판정 코드를 실행한 결과입니다. 왼쪽은 빈자리·점유 탐지 박스, 오른쪽은 다각형 매핑과 시간 필터를 적용한 주차면 상태입니다. 녹화 영상의 일부 구간을 재실행했으며, 빨간색은 점유·초록색은 빈자리입니다.
+
+[55호관 20면 MP4](docs/demo/building55-inference.mp4) · [도서관 36면 MP4](docs/demo/library-inference.mp4) · [모델 정보와 프레임별 실행 기록](docs/MODEL.md)
 
 ## 주요 기능과 실행 화면
 
@@ -46,7 +55,7 @@
   <tr>
     <td width="33%" valign="top"><img src="https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&amp;logo=flutter&amp;logoColor=white" alt="Flutter"><br><strong>운전자·관리자 앱</strong><br>지도, 주차 현황, 통계, 관리 화면을 하나의 코드베이스로 구성했습니다. Android·iOS·Web 화면을 같은 데이터 모델과 API로 연결할 수 있습니다.</td>
     <td width="33%" valign="top"><img src="https://img.shields.io/badge/Flask-000000?style=for-the-badge&amp;logo=flask&amp;logoColor=white" alt="Flask"><br><strong>분석 API</strong><br>Python 영상 처리 로직을 앱과 분리하고, 주차 상태·통계·관리 기능을 REST API로 제공하기 위해 사용했습니다.</td>
-    <td width="33%" valign="top"><img src="https://img.shields.io/badge/YOLOv8-111F68?style=for-the-badge&amp;logo=ultralytics&amp;logoColor=white" alt="YOLOv8"><br><strong>주차면 탐지</strong><br>프로젝트 데이터로 학습한 <code>space-empty</code>·<code>space-occupied</code> 모델 결과를 프레임별 주차 상태 판정에 사용합니다.</td>
+    <td width="33%" valign="top"><img src="https://img.shields.io/badge/YOLOv8x-111F68?style=for-the-badge&amp;logo=ultralytics&amp;logoColor=white" alt="YOLOv8x"><br><strong>주차면 탐지</strong><br><code>space-empty</code>·<code>space-occupied</code>로 학습한 YOLOv8x를 사용합니다. 저장된 검증 지표와 실제 영상 실행 결과를 함께 확인할 수 있습니다.</td>
   </tr>
   <tr>
     <td valign="top"><img src="https://img.shields.io/badge/OpenCV-5C3EE8?style=for-the-badge&amp;logo=opencv&amp;logoColor=white" alt="OpenCV"><br><strong>영상·공간 처리</strong><br>영상 프레임을 읽고, 탐지 박스와 주차면 다각형의 마스크 교차 영역을 계산하는 데 사용했습니다.</td>
@@ -70,17 +79,15 @@
 
 ### 1. 모든 프레임을 추론해 주차 정보 반영이 늦어짐
 
-**문제·원인:** 초기 구조는 입력되는 모든 프레임에 YOLO 추론을 수행했습니다. 연속 프레임 사이에 차량 점유 상태가 매번 바뀌지는 않는데도 모델 실행을 반복해 새 상태가 화면에 반영되기까지 약 10초가 걸렸습니다.
+**문제·원인:** 연속된 영상 프레임은 대부분 비슷한 주차 상태를 담고 있습니다. 이때 모든 프레임에 모델을 반복 실행하면 상태 변화가 없는 장면에도 추론 비용이 발생합니다.
 
 **해결:** 프레임 카운터를 두고 **5프레임당 1회**만 추론하도록 변경했습니다. 추론하지 않는 프레임은 모델 실행을 건너뛰고, 상태 판정은 추론이 실행된 프레임에서만 갱신합니다. [프레임 스킵 코드](app_v1.py#L695-L704)
 
-| 항목 | 변경 전 | 변경 후 |
+| 항목 | 모든 프레임을 추론할 경우 | 현재 설정 |
 | --- | --- | --- |
 | 추론 주기 | 매 프레임 | 5프레임당 1회 |
 | 추론 대상 프레임 수 | 100% | 약 20% |
-| 결과 반영 시간 | 약 10초 | 3초 이내 |
-
-결과 반영 시간은 **프로젝트 당시 측정값**입니다. 코드에서 직접 확인할 수 있는 변화는 추론 대상 프레임 수 약 80% 감소이며, 영상 디코딩 등을 포함한 전체 연산량이 80% 줄었다는 뜻은 아닙니다.
+추론 대상 프레임 수를 약 80% 줄이는 설정입니다. 이번 시연에서도 같은 간격으로 모델을 실행했으며, 원본 프레임 번호와 실제 추론 결과를 [실행 기록](docs/MODEL.md)에 남겼습니다. 영상 디코딩 등을 포함한 전체 연산량 감소율을 뜻하지는 않습니다.
 
 ### 2. 한 프레임의 탐지 누락이 빈자리 안내로 이어짐
 
@@ -105,7 +112,8 @@
 ## 결과
 
 - 2개 주차장, **56개 주차면**을 대상으로 상태 조회 구조 구현
-- 5프레임당 1회 추론으로 **추론 대상 프레임 수 약 80% 감소**, 프로젝트 측정 기준 결과 반영 시간 약 10초 → 3초 이내
+- 5프레임당 1회 추론으로 **추론 대상 프레임 수 약 80% 감소**
+- 학습된 YOLOv8x로 두 주차장 원본 영상을 재실행하고, 탐지·주차면 상태를 나란히 보여주는 시연과 프레임별 결과 공개
 - 시간 가중 필터와 비대칭 상태 전이 기준으로 순간적인 탐지 누락이 곧바로 빈자리 안내에 반영되지 않도록 설계
 - SQLite 기록을 활용한 시간대별 점유율 조회와 방문 시간 추천 구현
 - 교내 소프트웨어 전시회 **인기상** 수상
@@ -119,12 +127,12 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-export MODEL_PATH="$PWD/models/best.pt"
+export MODEL_PATH="$PWD/models/best_seo.pt"
 export ADMIN_TOKEN="change-me"
 python app_v1.py --no-video
 ```
 
-기본 포트는 `5000`입니다. 저장소에 도서관 입력 영상 [`videos/library2.mp4`](videos/library2.mp4)는 있지만, **학습된 모델 가중치는 포함되어 있지 않습니다.** 실제 추론에는 `models/best.pt` 또는 `MODEL_PATH`로 지정한 가중치가 필요합니다. 영상 경로는 `VIDEO_PATH_A`, `VIDEO_PATH_B`로 지정할 수 있습니다.
+기본 포트는 `5000`입니다. 실제 시연에 사용한 가중치는 `best_seo.pt`이며 파일 식별 정보와 환경은 [모델·추론 재현 문서](docs/MODEL.md)에 정리했습니다. 원본 가중치는 Git 저장소에 포함하지 않으므로 `models/best_seo.pt`에 두거나 `MODEL_PATH`로 지정합니다. 도서관 입력 영상은 [`videos/library2.mp4`](videos/library2.mp4)에 있으며, 다른 영상 경로는 `VIDEO_PATH_A`, `VIDEO_PATH_B`로 지정할 수 있습니다.
 
 ### Flutter 앱
 
